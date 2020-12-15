@@ -20,8 +20,14 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  return {
+    width,
+    height,
+    getArea() {
+      return width * height;
+    },
+  };
 }
 
 
@@ -35,8 +41,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,8 +57,8 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  return Object.setPrototypeOf(JSON.parse(json), proto);
 }
 
 
@@ -110,35 +116,123 @@ function fromJSON(/* proto, json */) {
  *  For more examples see unit tests.
  */
 
+class Selector {
+  constructor(selector) {
+    this.selector = selector || '';
+    this.present = {};
+  }
+
+  stringify() {
+    return this.selector;
+  }
+
+  toString() {
+    return this.selector;
+  }
+}
+
+Selector.quantityError = new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+Selector.orderError = new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.element) {
+      throw Selector.quantityError;
+    }
+
+    if (selector.toString() !== '') {
+      throw Selector.orderError;
+    }
+
+    selector.selector = value;
+
+    selector.present.element = true;
+    return selector;
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.id) {
+      throw Selector.quantityError;
+    }
+
+    if (selector.present.pseudoElement || selector.present.class) {
+      throw Selector.orderError;
+    }
+
+    selector.selector = `${selector.selector}#${value}`;
+
+    selector.present.id = true;
+    return selector;
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.attr) {
+      throw Selector.orderError;
+    }
+
+    selector.selector = `${selector.selector}.${value}`;
+
+    selector.present.class = true;
+    return selector;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.pseudoClass) {
+      throw Selector.orderError;
+    }
+
+    selector.selector = `${selector.selector}[${value}]`;
+
+    selector.present.attr = true;
+    return selector;
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.pseudoElement) {
+      throw Selector.orderError;
+    }
+
+    selector.selector = `${selector.selector}:${value}`;
+
+    selector.present.pseudoClass = true;
+    return selector;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const selector = this instanceof Selector ? this : new Selector();
+
+    if (selector.present.pseudoElement) {
+      throw Selector.quantityError;
+    }
+
+    if (selector.present.class) {
+      throw Selector.orderError;
+    }
+
+    selector.selector = `${selector.selector}::${value}`;
+
+    selector.present.pseudoElement = true;
+    return selector;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return new Selector(`${selector1} ${combinator} ${selector2}`);
   },
 };
+
+Object.entries(cssSelectorBuilder).forEach((method) => {
+  [, Selector.prototype[method[0]]] = method;
+});
 
 
 module.exports = {
